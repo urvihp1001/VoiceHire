@@ -12,13 +12,19 @@ function Provider({ children }) {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) return;
 
-      setUser(currentUser);
+      // ✅ Fix: set a cleaned user object
+      setUser({
+        id: currentUser.id,
+        email: currentUser.email,
+        name: currentUser.user_metadata?.name || "",
+        picture: currentUser.user_metadata?.picture || "",
+      });
 
       const { data: existingUsers, error: selectError } = await supabase
         .from("Users")
-        .select("id") // Select only `id`, lighter query
+        .select("id")
         .eq("email", currentUser.email)
-        .single();    // Expect one record or null
+        .single();
 
       if (selectError && selectError.code !== 'PGRST116') {
         console.error("Error fetching user:", selectError);
@@ -38,7 +44,16 @@ function Provider({ children }) {
     getUserAndCreate();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || "",
+          picture: session.user.user_metadata?.picture || "",
+        });
+      } else {
+        setUser(null);
+      }
     });
 
     return () => subscription.unsubscribe();
