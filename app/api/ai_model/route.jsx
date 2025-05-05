@@ -23,9 +23,10 @@ try{
       messages: [
         { role: "user", content: FINAL_PROMPT }
       ],
+      response_format: 'json'
     })
       console.log(completion.choices[0].message.content)
-      return NextResponse.json()
+      return NextResponse.json(completion.choices[0].message.content)
     }catch(e)
     {
         console.log(e)

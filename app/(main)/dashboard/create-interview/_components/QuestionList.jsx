@@ -1,33 +1,48 @@
 import { Loader2Icon } from 'lucide-react';
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import axios from 'axios'
+import axios from 'axios';
 
 function QuestionList({ formData }) {
   const [loading, setLoading] = useState(true);
-  const [questions, setQuestions] = useState([]);
+  const [questionList, setQuestionList] = useState([]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (formData) {
-      GenerateQuestionList();
+      GenerateQuestionList(cancelled);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [formData]);
 
-  const GenerateQuestionList = async () => {
+  const GenerateQuestionList = async (cancelled) => {
     setLoading(true);
     try {
       const result = await axios.post('/api/ai_model', {
-        ...formData
+        ...formData,
       });
-      console.log(result.data);
-      // drill down to the content
-      const content = result.data.choices[0].message.content;
-      // optionally split into lines
-      const list = content.split('\n').filter(line => line.trim() !== '');
-      setQuestions(list);
-      setLoading(false);
+
+      let content = result.data.content;
+      console.log("Raw Response Content:", content);
+
+      // Extract JSON from Markdown block
+      const match = content.match(/```json\s*([\s\S]*?)\s*```/i);
+      const cleaned = match ? match[1] : content;
+      console.log("Cleaned JSON String:", cleaned);
+
+      const parsed = JSON.parse(cleaned);
+
+      if (!cancelled) {
+        setQuestionList(parsed);
+        setLoading(false);
+      }
     } catch (e) {
-      toast("Server Error, try again");
+      console.error("Error during question generation:", e);
+      toast(`Server Error: ${e.message}`);
       setLoading(false);
     }
   };
@@ -35,20 +50,22 @@ function QuestionList({ formData }) {
   return (
     <div>
       {loading && (
-        <div className='p-5 bg-blue-50 rounded-xl border border-gray-100 flex gap-5'>
-          <Loader2Icon className='animate-spin' />
+        <div className="p-5 bg-blue-50 rounded-xl border border-primary flex gap-5">
+          <Loader2Icon className="animate-spin" />
           <div>
-            <h2>Generating Interview...</h2>
-            <p>Our AI is crafting personalised questions based on your specifications</p>
+            <h2 className="font-medium">Generating Interview...</h2>
+            <p className="text-primary">
+              Our AI is crafting personalised questions based on your specifications
+            </p>
           </div>
         </div>
       )}
 
-      {!loading && questions.length > 0 && (
-        <div className='mt-5 p-5 bg-white rounded-xl border border-gray-100'>
-          <h2 className='text-sm font-medium mb-2'>Generated Questions</h2>
-          <ul className='list-disc list-inside space-y-1'>
-            {questions.map((q, i) => (
+      {!loading && (
+        <div className="mt-5 p-5 bg-white rounded-xl border border-gray-100">
+          <h2 className="text-sm font-medium mb-2">Generated Questions</h2>
+          <ul className="list-disc list-inside space-y-1">
+            {questionList.map((q, i) => (
               <li key={i}>{q}</li>
             ))}
           </ul>
