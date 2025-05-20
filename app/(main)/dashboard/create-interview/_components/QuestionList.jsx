@@ -1,77 +1,71 @@
-import { Loader2Icon } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import QuestionListContainer from './QuestionListContainer';
 
 function QuestionList({ formData }) {
-  const [loading, setLoading] = useState(true);
-  const [questionList, setQuestionList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [error, setError] = useState('');
+  const fetchedOnce = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    fetchedOnce.current = false;
 
-    if (formData) {
-      GenerateQuestionList(cancelled);
+    if (formData && !fetchedOnce.current) {
+      fetchQuestions(cancelled);
     }
-
     return () => {
       cancelled = true;
     };
   }, [formData]);
 
-  const GenerateQuestionList = async (cancelled) => {
+  const fetchQuestions = async (cancelled) => {
     setLoading(true);
+    setError('');
+    setQuestions([]);
     try {
-      const result = await axios.post('/api/ai_model', {
-        ...formData,
-      });
-
-      let content = result.data.content;
-      console.log("Raw Response Content:", content);
-
-      // Extract JSON from Markdown block
-      const match = content.match(/```json\s*([\s\S]*?)\s*```/i);
-      const cleaned = match ? match[1] : content;
-      console.log("Cleaned JSON String:", cleaned);
-
-      const parsed = JSON.parse(cleaned);
-
-      if (!cancelled) {
-        setQuestionList(parsed);
+      const result = await axios.post('/api/ai_model', { ...formData });
+      let questionsArr = [];
+      if (Array.isArray(result?.data?.interviewQuestions)) {
+        questionsArr = result.data.interviewQuestions;
+      } else if (Array.isArray(result?.data?.questions)) {
+        const first = result.data.questions[0];
+        if (typeof first === 'string' && first.startsWith('```')) {
+          const match = first.match(/```json\s*([\s\S]*?)\s*```/);
+          if (match && match[1]) {
+            try {
+              const parsed = JSON.parse(match[1]);
+              if (Array.isArray(parsed.interviewQuestions)) {
+                questionsArr = parsed.interviewQuestions;
+              }
+            } catch {}
+          }
+        } else if (typeof first === 'object' && first.question) {
+          questionsArr = result.data.questions;
+        } else if (typeof first === 'string') {
+          questionsArr = result.data.questions.map(q => ({ question: q }));
+        }
+      }
+      if (!Array.isArray(questionsArr) || questionsArr.length === 0) {
+        throw new Error('No questions found in response');
+      }
+      if (!cancelled && !fetchedOnce.current) {
+        setQuestions(questionsArr);
         setLoading(false);
+        fetchedOnce.current = true;
       }
     } catch (e) {
-      console.error("Error during question generation:", e);
-      toast(`Server Error: ${e.message}`);
-      setLoading(false);
+      if (!cancelled) {
+        setError(e.message || 'Server Error');
+        setLoading(false);
+      }
     }
   };
 
+  // Always render the UI container, passing state as props
   return (
-    <div>
-      {loading && (
-        <div className="p-5 bg-blue-50 rounded-xl border border-primary flex gap-5">
-          <Loader2Icon className="animate-spin" />
-          <div>
-            <h2 className="font-medium">Generating Interview...</h2>
-            <p className="text-primary">
-              Our AI is crafting personalised questions based on your specifications
-            </p>
-          </div>
-        </div>
-      )}
-
-      {!loading && (
-        <div className="mt-5 p-5 bg-white rounded-xl border border-gray-100">
-          <h2 className="text-sm font-medium mb-2">Generated Questions</h2>
-          <ul className="list-disc list-inside space-y-1">
-            {questionList.map((q, i) => (
-              <li key={i}>{q}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <QuestionListContainer questions={questions} loading={loading} error={error} />
   );
 }
 
