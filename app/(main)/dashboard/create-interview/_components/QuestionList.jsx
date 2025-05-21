@@ -1,23 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import QuestionListContainer from './QuestionListContainer';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { supabase } from '@/services/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
+import { useUser } from '@/app/provider';
+// import {onCreateLink} from './InterviewLink'; // Don't import this here
 
-function QuestionList({ formData }) {
+function QuestionList({ formData, onCreateLink }) {
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState('');
   const fetchedOnce = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetchedOnce.current = false;
-
     if (formData && !fetchedOnce.current) {
       fetchQuestions(cancelled);
     }
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line
   }, [formData]);
 
   const fetchQuestions = async (cancelled) => {
@@ -63,9 +70,45 @@ function QuestionList({ formData }) {
     }
   };
 
-  // Always render the UI container, passing state as props
+  const onFinish = async () => {
+    setSaveLoading(true);
+    try {
+      const interview_id = uuidv4();
+      const { data, error } = await supabase
+        .from('interviews')
+        .insert([
+          {
+            ...formData,
+            questionList: questions,
+            userEmail: user?.email,
+            interview_id,
+          }
+        ])
+        .select();
+      if (error) {
+        toast.error('Failed to save to Supabase!');
+      } else {
+        toast.success('Saved to Supabase!');
+        // Assuming onCreateLink triggers navigation in the parent
+        onCreateLink({ interview_id });
+      }
+    } catch (e) {
+      toast.error('An error occurred while saving!');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   return (
-    <QuestionListContainer questions={questions} loading={loading} error={error} />
+    <div>
+      <QuestionListContainer questions={questions} loading={loading} error={error} />
+      <div className="mt-4 text-sm text-gray-500">
+        <Button onClick={onFinish} disabled={saveLoading}>
+          {saveLoading && <span className="animate-spin mr-2">⏳</span>}
+          Create Interview Link & Finish
+        </Button>
+      </div>
+    </div>
   );
 }
 

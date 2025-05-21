@@ -1,10 +1,7 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
 
-const onFinish = () => {
-  // You can move this to props if you want!
-  import('sonner').then(({ toast }) => toast.success('Interview questions generated successfully!'));
-};
+
+
 
 function QuestionListContainer({ questions = [], loading, error }) {
   if (loading) {
@@ -55,9 +52,7 @@ function QuestionListContainer({ questions = [], loading, error }) {
             </li>
           ))}
       </ul>
-      <div className="mt-4 text-sm text-gray-500">
-        <Button onClick={onFinish}>Finish</Button>
-      </div>
+      
     </div>
   );
 }
