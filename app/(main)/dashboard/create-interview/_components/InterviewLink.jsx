@@ -5,17 +5,12 @@ import { ArrowLeft, Clock, Mail, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-function InterviewLink({ interview_id, formData }) {
-  // Extract the actual ID if interview_id is an object
-  let id = interview_id
-  if (typeof interview_id === 'object' && interview_id !== null) {
-    id = interview_id.interview_id || interview_id.id || ''
-  }
 
-  const GetInterviewUrl = () => {
-    return `${process.env.NEXT_PUBLIC_HOST_URL}/${id}`
-  }
-
+function InterviewLink({interview_id, formData}) {
+const GetInterviewUrl=() => {
+const url=process.env.NEXT_PUBLIC_HOST_URL+'/'+interview_id;
+return url;
+} 
   return (
     <div className="flex items-center justify-center min-h-[60vh] bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-lg flex flex-col items-center border border-indigo-100">
