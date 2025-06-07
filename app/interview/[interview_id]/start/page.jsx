@@ -1,13 +1,33 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { InterviewDataContext } from '@/app/context/InterviewDataContext';  
 import { Timer, Mic, Phone } from 'lucide-react';
 import Image from 'next/image';
-
+import Vapi from '@vapi-ai/web';
 function Start() {
     const context = React.useContext(InterviewDataContext);
     const [interviewInfo] = context || [];
+    const vapi= new Vapi(process.env.NEXT_PUBLIC_VAPI_API_KEY, );
+
+    useEffect(() => {
+        interviewInfo&&startCall();
+    }, [interviewInfo]);
+
+  const startCall = () => {
+  console.log("interviewInfo:", interviewInfo); // For debugging
+  console.log("interviewInfo.questionList:", interviewInfo?.questionList); // For debugging
+
+  const questions = interviewInfo?.questionList;
+  if (Array.isArray(questions) && questions.length > 0) {
+    const questionList = questions.map(q => q.question).join(', ');
+    console.log("Starting call with questions:", questionList);
+  } else {
+    console.log("Starting call with questions: No questions found or data not loaded yet.");
+  }
+
+
+    }
     function getInitials(name) {
         if (!name) return "";
         const parts = name.trim().split(" ");
