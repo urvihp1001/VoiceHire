@@ -1,20 +1,21 @@
 'use client'
 
-import React, { useRef, useContext, useState } from 'react'
+import React, { useRef, useContext, useState, useEffect } from 'react'
 import { InterviewDataContext } from '@/app/context/InterviewDataContext'
-import { Timer } from 'lucide-react'
+import { Timer, Mic, PhoneOff } from 'lucide-react'
 import Image from 'next/image'
 import Vapi from '@vapi-ai/web'
 import AlertConformation from './_components/AlertConformation'
+import { toast } from 'sonner'
 
 function Start() {
   const context = useContext(InterviewDataContext)
   const [interviewInfo] = context || []
   const vapiRef = useRef(null)
   const [interviewStarted, setInterviewStarted] = useState(false)
+  const [activeUser, setActiveUser] = useState(false)
   const [error, setError] = useState(null)
 
-  // Ensure required fields are present
   const isInterviewInfoComplete = interviewInfo &&
     typeof interviewInfo.username === 'string' &&
     interviewInfo.username.trim() !== '' &&
@@ -28,24 +29,38 @@ function Start() {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
   }
 
-  // Initialize Vapi with API key as a string
   const initializeVapi = () => {
     if (vapiRef.current) return
 
     const apiKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY
-    console.log('API Key:', apiKey, typeof apiKey)
-
     if (!apiKey || typeof apiKey !== 'string') {
       setError("API key missing or invalid! Set NEXT_PUBLIC_VAPI_PUBLIC_KEY in .env.local")
       return
     }
 
-    // Correct usage: pass the API key as a string, not an object!
     const vapiInstance = new Vapi(apiKey)
 
     vapiInstance.on('error', (err) => {
       setError('Vapi SDK error: ' + (err?.message || err))
       console.error('[Vapi SDK Error Event]', err)
+    })
+
+    vapiInstance.on('call-start', () => {
+      console.log('Call started')
+      toast.success('Call started successfully!')
+    })
+
+    vapiInstance.on('call-end', () => {
+      console.log('Call end')
+      toast.success('Interview ended successfully!')
+    })
+
+    vapiInstance.on('speech-start', () => {
+      setActiveUser(false)
+    })
+
+    vapiInstance.on('speech-end', () => {
+      setActiveUser(true)
     })
 
     vapiRef.current = vapiInstance
@@ -73,7 +88,6 @@ function Start() {
       ? questions.map(q => q.question).join(', ')
       : 'No questions found'
 
-    // --- FIX: Send assistant options directly, NOT wrapped in { assistant: ... } ---
     const assistantOptions = {
       name: "AI Recruiter",
       firstMessage: `Hi ${username}, how are you? Ready for your interview on ${jobPosition}?`,
@@ -95,25 +109,16 @@ function Start() {
             content: `
 You are an AI voice assistant conducting interviews.
 Your job is to ask candidates provided interview questions, assess their responses.
-Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
+Begin the conversation with a friendly introduction, setting a relaxed yet professional tone.
 "Hey there! Welcome to your ${jobPosition} interview. Let’s get started with a few questions!"
-Ask one question at a time and wait for the candidate’s response before proceeding. Keep the questions clear and concise. Below Are the questions ask one by one:
+Ask one question at a time and wait for the candidate’s response before proceeding.
+Keep the questions clear and concise. Below Are the questions ask one by one:
 Questions: ${questionList}
-If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
-"Need a hint? Think about how React tracks component updates!"
-Provide brief, encouraging feedback after each answer. Example:
-"Nice! That’s a solid answer."
-"Hmm, not quite! Want to try again?"
-Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let’s tackle a tricky one!"
-After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example:
-"That was great! You handled some tough questions well. Keep sharpening your skills!"
-End on a positive note:
-"Thanks for chatting! Hope to see you crushing projects soon!"
-Key Guidelines:
-✅ Be friendly, engaging, and witty 🎤
-✅ Keep responses short and natural, like a real conversation
-✅ Adapt based on the candidate’s confidence level
-✅ Ensure the interview remains focused on React
+Offer hints if they struggle. Provide brief feedback.
+Wrap up after 5-7 questions and end on a positive note.
+✅ Friendly and witty 🎤
+✅ Short, natural responses
+✅ Focused on React
             `.trim(),
           },
         ],
@@ -138,6 +143,10 @@ Key Guidelines:
     }
   }
 
+  useEffect(() => {
+    handleStartInterview()
+  }, [])
+
   return (
     <div
       style={{
@@ -149,6 +158,28 @@ Key Guidelines:
         background: "#fff"
       }}
     >
+     <style>
+{`
+  .pulse-ring {
+    animation: pulse-ring 1.5s infinite;
+    background: rgba(41, 120, 247, 0.15);
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(41, 120, 247, 0.5);
+    }
+    70% {
+      box-shadow: 0 0 0 15px rgba(41, 120, 247, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(41, 120, 247, 0);
+    }
+  }
+`}
+</style>
+
+
       <h2
         style={{
           display: "flex",
@@ -178,6 +209,7 @@ Key Guidelines:
           00:00:00
         </span>
       </h2>
+
       <div
         style={{
           background: "#fafbfc",
@@ -192,7 +224,7 @@ Key Guidelines:
           gap: 40
         }}
       >
-        {/* Interviewer */}
+        {/* AI Interviewer */}
         <div
           style={{
             background: "#fff",
@@ -205,17 +237,33 @@ Key Guidelines:
             width: 180
           }}
         >
-          <Image
-            src="/ai.jpg"
-            alt="AI Interviewer"
-            width={100}
-            height={100}
-            style={{
-              borderRadius: "50%",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
-              marginBottom: 12
-            }}
-          />
+          <div
+  className={!activeUser ? 'pulse-ring' : ''}
+  style={{
+    width: 110,
+    height: 110,
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12
+  }}
+>
+  <Image
+    src="/ai.jpg"
+    alt="AI Interviewer"
+    width={100}
+    height={100}
+    style={{
+      borderRadius: '50%',
+      objectFit: 'cover',
+      width: 100,
+      height: 100,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.10)'
+    }}
+  />
+</div>
+
           <span
             style={{
               fontWeight: 600,
@@ -226,6 +274,7 @@ Key Guidelines:
             AI Interviewer
           </span>
         </div>
+
         {/* Candidate */}
         <div
           style={{
@@ -239,27 +288,38 @@ Key Guidelines:
             width: 180
           }}
         >
-          {interviewInfo?.username ? (
-            <span
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                background: "#2978f7",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 12,
-                userSelect: "none",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.10)"
-              }}
-            >
-              {getInitials(interviewInfo.username)}
-            </span>
-          ) : null}
+          <div
+  className={!activeUser ? 'pulse-ring' : ''}
+  style={{
+    width: 110,
+    height: 110,
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    background: '#2978f7'
+  }}
+>
+  <span
+    style={{
+      width: 100,
+      height: 100,
+      borderRadius: "50%",
+      background: "#2978f7",
+      color: "#fff",
+      fontWeight: 600,
+      fontSize: 36,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      userSelect: "none",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.10)"
+    }}
+  >
+    {getInitials(interviewInfo?.username)}
+  </span>
+</div>
           <span
             style={{
               fontWeight: 600,
@@ -272,44 +332,38 @@ Key Guidelines:
           </span>
         </div>
       </div>
-      <div style={{ marginTop: 32, textAlign: 'center' }}>
-        {!interviewStarted && (
-          <button
-            onClick={handleStartInterview}
-            style={{
-              padding: '12px 32px',
-              fontSize: 18,
-              fontWeight: 600,
-              background: '#2978f7',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              cursor: 'pointer',
-              boxShadow: "0 2px 8px rgba(41,120,247,0.10)"
-            }}
-          >
-            Start Interview
-          </button>
-        )}
-        {interviewStarted && (
-          <button
-            onClick={stopInterview}
-            style={{
-              padding: '12px 32px',
-              fontSize: 18,
-              fontWeight: 600,
-              background: '#f5222d',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              cursor: 'pointer',
-              marginLeft: 16,
-              boxShadow: "0 2px 8px rgba(245,34,45,0.10)"
-            }}
-          >
-            Stop Interview
-          </button>
-        )}
+
+      <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center', gap: 32 }}>
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            background: '#4caf50',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'not-allowed'
+          }}
+        >
+          <Mic size={28} color="#fff" />
+        </div>
+
+        <div
+          onClick={stopInterview}
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            background: '#f5222d',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <PhoneOff size={28} color="#fff" />
+        </div>
       </div>
 
       {error && (
