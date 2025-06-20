@@ -1,17 +1,20 @@
-"use client"
+'use client'
+
 import React from 'react'
 import InterviewHeader from './components/InterviewHeader'
-import { InterviewDataContext } from '@/app/context/InterviewDataContext';
+import { InterviewDataContext } from '@/app/context/InterviewDataContext'
+
 function InterviewLayout({ children }) {
-  const [interviewInfo, setInterviewInfo] = React.useState();
+  const state = React.useState(null); // returns [interviewInfo, setInterviewInfo]
+
   return (
-    <InterviewDataContext.Provider value={{interviewInfo, setInterviewInfo}}>
+    <InterviewDataContext.Provider value={state}>
       <div className='bg-secondary h-screen'>
-        <InterviewHeader/>
+        <InterviewHeader />
         {children}
-    </div>
+      </div>
     </InterviewDataContext.Provider>
   )
 }
 
-export default InterviewLayout
+export default InterviewLayout;

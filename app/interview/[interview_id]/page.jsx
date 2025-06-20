@@ -20,7 +20,7 @@ function Interview() {
   const [loading, setLoading] = useState(false);
 
   const context = useContext(InterviewDataContext);
-  const [interviewInfo, setInterviewInfo] = context || [];
+  const [interviewInfo, setInterviewInfo] = context;
 
   useEffect(() => {
     if (interview_id) fetchInterviewDetails();

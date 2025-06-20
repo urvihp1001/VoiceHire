@@ -7,54 +7,145 @@ import Image from 'next/image'
 import Vapi from '@vapi-ai/web'
 import AlertConformation from './_components/AlertConformation'
 import { toast } from 'sonner'
-
+ const vapi= new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY)
 function StartInterview(){
-  const {interviewInfo, setInterviewInfo} = useContext(InterviewDataContext);
-  const vapi= new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY)
+  const context = useContext(InterviewDataContext);
+const [interviewInfo, setInterviewInfo] = Array.isArray(context) ? context : [null, () => {}];
+const [activeUser, setActiveUser] = useState(false);
+ 
 
-  useEffect(()=>{
-    interviewInfo && vapi.startInterview();
-  },[interviewInfo])
-  const startCall=()=>{
-    if(interviewInfo){
+  useEffect(() => {
+  if (interviewInfo) startCall();
+}, [interviewInfo]);
+const stopInterview = () => {
+  vapi.stop();  
+}
+vapi.on('call-start',() => {
+  console.log('Call started');
+  toast.success('Call started successfully');
+ 
+})
+vapi.on('call-end',() => {
+  console.log('Call ended');
+  toast.success('Call ended successfully');
+ 
+})
+vapi.on('speech-start',()=>{
+  console.log('Speech started');
+  setActiveUser(false);
+})
+vapi.on('speech-end',()=>{
+  console.log('Speech ended');
+  setActiveUser(true);
+})
+const startCall = () => {
+  const questionList = interviewInfo?.questionList
+    ?.map((item) => item.question)
+    .join(',');
+  console.log(questionList);
 
-    }
-  }
+
+const assistantOptions = {
+    name: "AI Recruiter",
+    firstMessage: "Hi"+interviewInfo?.username+", how are you? Ready for your interview on"+interviewInfo?.jobPosition+"?",
+    transcriber: {
+        provider: "deepgram",
+        model: "nova-2",
+        language: "en-US",
+    },
+    voice: {
+        provider: "playht",
+        voiceId: "jennifer",
+    },
+    model: {
+        provider: "openai",
+        model: "gpt-4",
+        messages: [
+            {
+                role: "system",
+                content: `
+  You are an AI voice assistant conducting interviews.
+Your job is to ask candidates provided interview questions, assess their responses.
+Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
+"Hey there! Welcome to your`+interviewInfo?.jobPosition+`interview. Let’s get started with a few questions!"
+Ask one question at a time and wait for the candidate’s response before proceeding. Keep the questions clear and concise. Below Are the questions ask one by one:
+Questions: `+questionList+`
+If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
+"Need a hint? Think about how React tracks component updates!"
+Provide brief, encouraging feedback after each answer. Example:
+"Nice! That’s a solid answer."
+"Hmm, not quite! Want to try again?"
+Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let’s tackle a tricky one!"
+After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example:
+"That was great! You handled some tough questions well. Keep sharpening your skills!"
+End on a positive note:
+"Thanks for chatting! Hope to see you crushing projects soon!"
+Key Guidelines:
+✅ Be friendly, engaging, and witty 🎤
+✅ Keep responses short and natural, like a real conversation
+✅ Adapt based on the candidate’s confidence level
+✅ Ensure the interview remains focused on React
+`.trim(),
+            },
+        ],
+    },
+
+};
+vapi.start(assistantOptions);
+};
+
   return(
     
-      <div className='p-20 lg:px-48 xl:px-56'>
-  <h2 className='font-bold text-xl flex justify-between'>
-    AI Interview Session
-    <span className='flex gap-2 items-center'>
-      <Timer/>
-      00:00:00
+<>
+  <div className='p-20 lg:px-48 xl:px-56'>
+    <h2 className='font-bold text-xl flex justify-between'>
+      AI Interview Session
+      <span className='flex gap-2 items-center'>
+        <Timer/>
+        00:00:00
 
-    </span>
-  </h2>
+      </span>
+    </h2>
 
-<div className='grid grid-cols-1 md:grid-cols-2 gap-7 mt-5'>
-  <div className='bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center '>
-    <Image src={'/ai.jpg'} alt='ai' width={100} height={100} 
-    className='w-[100px] h-[100px] rounded-full object-cover' 
-    />
-    <h2>AI Recruiter</h2>
-</div>
- <div className='bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center '>
-   <h2
-   className='text-7xl font-bold text-center bg-primary text-white p-3 rounded-full px-5'
-   >{interviewInfo?.username[0]}</h2>
-<h2>{interviewInfo?.username}</h2>
-</div>
-</div>
-<div className='flex justify-center items-center mt-10 gap-5'>
-  <Mic className='bg-gray-500 p-3 rounded-full text-white w-12 h-12  cursor-pointer' onClick={()=>{}} />
-  <PhoneOff className='bg-red-500 text-white p-3 rounded-full w-12 h-12 ml-3 cursor-pointer' onClick={()=>{}} />
-</div>
-<h2 className='text-sm text-gray-400 text-center mt-5'>Interview in Progress...</h2>
-</div>
-    
+    <div className='grid grid-cols-1 md:grid-cols-2 gap-7 mt-5'>
+      <div className='bg-blue h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center '>
+        <div className='relative w-[100px] h-[100px]'>
+          {!activeUser && (
+            <span className='absolute inset-0 rounded-full bg-blue-500 animate-pulse-ring z-10'></span>
+          )}
+          <Image
+            src={'/ai.jpg'}
+            alt='ai'
+            width={100}
+            height={100}
+            className='w-[100px] h-[100px] rounded-full object-cover relative z-10'
+          />
+
+        </div>
+        <h2>AI Recruiter</h2>
+      </div>
+      <div className='bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center'>
+  <div className='relative w-[120px] h-[120px] flex items-center justify-center'>
+    {activeUser && (
+      <span className='absolute inset-0 rounded-full bg-primary animate-pulse-ring z-0'></span>
+    )}
+    <h2 className='text-7xl font-bold text-center bg-primary text-white p-3 rounded-full px-5 relative z-10'>
+      {interviewInfo?.username[0]}
+    </h2>
+  </div>
 
 
+  <div className='flex justify-center items-center mt-10 gap-5'>
+    <Mic className='bg-gray-500 p-3 rounded-full text-white w-12 h-12  cursor-pointer'  />
+    <AlertConformation stopInterview={stopInterview}>
+      <PhoneOff className='bg-red-500 text-white p-3 rounded-full w-12 h-12 ml-3 cursor-pointer' onClick={()=>{}} />
+    </AlertConformation>
+  </div>
+  <h2 className='text-sm text-gray-400 text-center mt-5'>Interview in Progress...</h2>
+</div>
+    </div>
+</div>
+</>
   );
 }
 
