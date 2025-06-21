@@ -17,6 +17,7 @@ function Interview() {
 
   const [interviewDetails, setInterviewDetails] = useState(null);
   const [username, setUsername] = useState('');
+  const [useremail, setEmail] = useState('');//undefined variable useremail prevent
   const [loading, setLoading] = useState(false);
 
   const context = useContext(InterviewDataContext);
@@ -60,6 +61,7 @@ function Interview() {
     setInterviewInfo?.({
       ...data[0],
       username,
+      useremail
     });
 
     router.push(`/interview/${interview_id}/start`);
@@ -87,14 +89,28 @@ function Interview() {
           </div>
         )}
 
-        <div className="w-full mb-4">
-          <label className="block mb-2 font-medium text-blue-800">Enter your full name</label>
-          <Input
-            type="text"
-            placeholder="Eg. John Smith"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+   
+          <div className="w-full mb-4">
+  <label className="block mb-2 font-medium text-blue-800">Enter your username</label>
+  <Input
+    type="text"
+    placeholder="Eg. John Smith"
+    value={username}
+    onChange={(e) => setUsername(e.target.value)}
+  />
+
+
+<div className="w-full mb-4">
+  <label className="block mb-2 font-medium text-blue-800">Enter your email</label>
+  <Input
+    type="email"
+    placeholder="Eg. johnsmith@gmail.com"
+    value={useremail}
+    onChange={(e) => setEmail(e.target.value)}
+  />
+
+</div>
+
         </div>
 
         <div className="w-full bg-blue-100 border border-blue-300 rounded-lg p-3">
