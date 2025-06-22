@@ -37,9 +37,9 @@ export async function POST(req) {
     });
 
     const completion = await openai.chat.completions.create({
-      model: "deepseek/deepseek-prover-v2:free",
+      model: "deepseek/deepseek-chat-v3-0324:free",
       messages: [{ role: "user", content: FINAL_PROMPT }],
-      response_format: { type: "json_object" }
+   
     });
 
     let content = completion.choices?.[0]?.message?.content || "";

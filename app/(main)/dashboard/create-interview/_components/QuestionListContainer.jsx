@@ -29,7 +29,7 @@ function QuestionListContainer({ questions = [], loading, error }) {
     );
   }
   if (!questions.length) return null;
-
+console.log("Questions:", questions);
   return (
     <div className="mt-5 space-y-3">
       <h2 className="text-base font-semibold mb-3">Generated Interview Questions</h2>

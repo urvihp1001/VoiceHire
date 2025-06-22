@@ -8,6 +8,7 @@ import Vapi from '@vapi-ai/web';
 import AlertConformation from './_components/AlertConformation';
 import { toast } from 'sonner';
 import TimerComponent from './_components/TimerComponent';
+import axios from 'axios';
 
 const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
 
@@ -38,6 +39,7 @@ function StartInterview() {
     console.log('Call ended');
     toast.success('Call ended successfully');
     setIsCallRunning(false);
+    GenerateFeedback();
   });
 
   vapi.on('speech-start', () => {
@@ -55,7 +57,14 @@ function StartInterview() {
     setConversation(message?.conversation);
   })
 
-  const GenerateFeedback=()=>{
+  const GenerateFeedback=async()=>{
+    const result= await axios.post('/api/ai_feedback', {
+      conversation: conversation,
+    });
+    console.log(result?.data);
+    const Content=result?.data?.content || "No feedback generated";
+    const FINAL_CONTENT = Content.replace('```json', '').replace('```', '').trim();
+    console.log(FINAL_CONTENT);
     
   }
 

@@ -89,7 +89,7 @@ function QuestionList({ formData, onCreateLink }) {
         toast.error('Failed to save to Supabase!');
       } else {
         toast.success('Saved to Supabase!');
-        // Assuming onCreateLink triggers navigation in the parent
+        console.log('Interview created:', data);
         onCreateLink({ interview_id });
       }
     } catch (e) {
