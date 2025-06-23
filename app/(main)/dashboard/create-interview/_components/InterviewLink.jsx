@@ -6,11 +6,22 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 
-function InterviewLink({interview_id, formData}) {
-const GetInterviewUrl=() => {
-const url=process.env.NEXT_PUBLIC_HOST_URL+'/'+interview_id;
-return url;
-} 
+function InterviewLink({ interview_id, formData }) {
+  const GetInterviewUrl = () => {
+    console.log('Interview ID:', interview_id, 'Form Data:', formData);
+
+    // If interview_id is a string, use it. If it's an object, get the property.
+    const id = typeof interview_id === 'string'
+      ? interview_id
+      : interview_id?.interview_id;
+
+    if (!id) return 'Interview ID missing!';
+    return `${process.env.NEXT_PUBLIC_HOST_URL}/${id}`;
+  };
+
+  // ...rest of your component
+
+
   return (
     <div className="flex items-center justify-center min-h-[60vh] bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-lg flex flex-col items-center border border-indigo-100">
