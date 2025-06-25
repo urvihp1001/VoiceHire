@@ -9,6 +9,8 @@ import AlertConformation from './_components/AlertConformation';
 import { toast } from 'sonner';
 import TimerComponent from './_components/TimerComponent';
 import axios from 'axios';
+import { useParams,useRouter } from 'next/navigation';
+import {supabase} from '@/services/supabaseClient';
 
 const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
 
@@ -18,7 +20,8 @@ function StartInterview() {
   const [activeUser, setActiveUser] = useState(false);
   const [isCallRunning, setIsCallRunning] = useState(false);
   const [conversation, setConversation] = useState(); 
-
+  const {interview_id}=useParams();
+  const router=useRouter();
   useEffect(() => {
     if (interviewInfo) startCall();
   }, [interviewInfo]);
@@ -35,12 +38,15 @@ function StartInterview() {
     setIsCallRunning(true);
   });
 
-  vapi.on('call-end', () => {
-    console.log('Call ended');
-    toast.success('Call ended successfully');
-    setIsCallRunning(false);
+  const feedbackSent = useRef(false);
+
+vapi.on('call-end', () => {
+  if (!feedbackSent.current) {
+    feedbackSent.current = true;
     GenerateFeedback();
-  });
+  }
+});
+
 
   vapi.on('speech-start', () => {
     console.log('Speech started');
@@ -65,7 +71,18 @@ function StartInterview() {
     const Content=result?.data?.content || "No feedback generated";
     const FINAL_CONTENT = Content.replace('```json', '').replace('```', '').trim();
     console.log(FINAL_CONTENT);
-    
+
+    const {data,error}=await supabase
+    .from('interview_feedback')
+    .insert({
+      username: interviewInfo?.username,
+      useremail: interviewInfo?.useremail,
+      interview_id: interview_id,
+      feedback: JSON.parse(FINAL_CONTENT),
+      recco:false
+    }).select();
+    console.log(data);
+    router.replace('/interview/completed');
   }
 
   const startCall = () => {

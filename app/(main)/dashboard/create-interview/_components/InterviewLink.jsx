@@ -18,10 +18,6 @@ function InterviewLink({ interview_id, formData }) {
     if (!id) return 'Interview ID missing!';
     return `${process.env.NEXT_PUBLIC_HOST_URL}/${id}`;
   };
-
-  // ...rest of your component
-
-
   return (
     <div className="flex items-center justify-center min-h-[60vh] bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-lg flex flex-col items-center border border-indigo-100">
