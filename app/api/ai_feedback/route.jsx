@@ -2,24 +2,20 @@ import { FEEDBACK_PROMPT } from "@/services/Constants";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// Fallback feedback in case AI response is invalid
 const FALLBACK_FEEDBACK = "Thank you for your responses. We'll get back to you soon.";
 
 export async function POST(req) {
   try {
     const { conversation } = await req.json();
 
-    if (!conversation) {
+    if (!conversation || typeof conversation !== "string") {
       return NextResponse.json(
-        { error: "Missing conversation", feedback: FALLBACK_FEEDBACK },
+        { error: "Missing or invalid conversation", feedback: FALLBACK_FEEDBACK },
         { status: 400 }
       );
     }
 
-    const FINAL_PROMPT = FEEDBACK_PROMPT.replace(
-      "{{conversation}}",
-      JSON.stringify(conversation)
-    );
+    const FINAL_PROMPT = FEEDBACK_PROMPT.replace("{{conversation}}", conversation);
 
     const openai = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
@@ -32,14 +28,14 @@ export async function POST(req) {
 
     const completion = await openai.chat.completions.create({
       model: "deepseek/deepseek-chat-v3-0324:free",
-      messages: [{ role: "user", content: FINAL_PROMPT }],
-     
+      messages: [{ role: "user", content: FINAL_PROMPT }]
     });
 
-    let content = completion.choices?.[0]?.message?.content || "";
+    let content = completion.choices?.[0]?.message?.content?.trim() || "";
     let feedback = "";
 
     try {
+      // Try parsing as JSON
       const parsed = JSON.parse(content);
       if (typeof parsed === "string") {
         feedback = parsed;
@@ -49,6 +45,7 @@ export async function POST(req) {
         feedback = JSON.stringify(parsed);
       }
     } catch {
+      // Fallback to raw content
       feedback = content || FALLBACK_FEEDBACK;
     }
 

@@ -85,34 +85,42 @@ function StartInterview() {
     }, 200);
   };
 
-  const GenerateFeedback = async (conv) => {
-    if (!conv || conv.length === 0) {
-      console.warn('Empty or invalid conversation:', conv);
-      return;
-    }
-    console.log('Generating feedback for conversation:', conv);
-    try {
-      const result = await axios.post('/api/ai_feedback', {
-        conversation: conv,
+ const GenerateFeedback = async (conv) => {
+  if (!conv || conv.length === 0) {
+    console.warn('Empty or invalid conversation:', conv);
+    return;
+  }
+
+  // Convert the conversation into readable format: "USER: ..." and "ASSISTANT: ..."
+  const readableConversation = conv
+    .map(msg => `${msg.role.toUpperCase()}: ${msg.content}`)
+    .join('\n');
+
+  console.log('Generating feedback for:\n', readableConversation);
+
+  try {
+    const result = await axios.post('/api/ai_feedback', {
+      conversation: readableConversation,
+    });
+
+    const rawFeedback = result?.data?.feedback || '';
+    const cleanedFeedback = rawFeedback.replace('```json', '').replace('```', '').trim();
+
+    await supabase
+      .from('interview_feedback')
+      .insert({
+        username: interviewInfo?.username,
+        useremail: interviewInfo?.useremail,
+        interview_id: interview_id,
+        feedback: JSON.parse(cleanedFeedback),
+        recco: false,
       });
-      const Content = result?.data?.content || 'No feedback generated';
-      const FINAL_CONTENT = Content.replace('```json', '').replace('```', '').trim();
 
-      await supabase
-        .from('interview_feedback')
-        .insert({
-          username: interviewInfo?.username,
-          useremail: interviewInfo?.useremail,
-          interview_id: interview_id,
-          feedback: JSON.parse(FINAL_CONTENT),
-          recco: false,
-        });
-
-      router.replace('/interview/completed');
-    } catch (err) {
-      console.error('Error generating feedback:', err);
-    }
-  };
+    router.replace('/interview/completed');
+  } catch (err) {
+    console.error('Error generating feedback:', err);
+  }
+};
 
   const startCall = () => {
     if (!vapi.current) return;
